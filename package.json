@@ -1,10 +1,14 @@
 {
-  "name": "ultraligero",
+  "name": "leafpack",
   "version": "1.0.0",
-  "description": "Gestor de mochilas ultra ligero",
+  "description": "Organizador de equipaje ultraligero para viajeros minimalistas",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "pm2 start ecosystem.config.js",
+    "stop": "pm2 stop leafpack",
+    "restart": "pm2 restart leafpack",
+    "logs": "pm2 logs leafpack",
+    "delete": "pm2 delete leafpack",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "nodemon server.js",
     "client": "cd frontend && npm run dev",
@@ -15,10 +19,11 @@
     "mochilas",
     "ultraligero",
     "viajes",
-    "equipaje"
+    "equipaje",
+    "leafpack"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

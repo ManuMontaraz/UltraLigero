@@ -272,6 +272,30 @@
       <div v-if="loading" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
       </div>
+
+      <!-- Footer -->
+      <footer class="mt-16 text-center pb-8">
+        <div class="text-gray-600 text-xs">
+          <p>
+            Licenciado bajo
+            <a
+              href="https://www.gnu.org/licenses/agpl-3.0.html"
+              target="_blank"
+              class="text-gray-500 hover:text-accent transition-colors"
+            >
+              AGPL-3.0
+            </a>
+            ·
+            <a
+              href="https://github.com/ManuMontaraz/ultraligero"
+              target="_blank"
+              class="text-gray-500 hover:text-accent transition-colors"
+            >
+              Código fuente en GitHub
+            </a>
+          </p>
+        </div>
+      </footer>
     </main>
 
     <!-- Modal Añadir Objeto -->

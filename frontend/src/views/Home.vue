@@ -106,10 +106,27 @@
       </div>
 
       <!-- Footer -->
-      <footer class="mt-16 text-center text-gray-500 text-sm">
-        <router-link to="/admin" class="hover:text-accent transition-colors">
-          Panel de Administración
-        </router-link>
+      <footer class="mt-16 text-center pb-8">
+        <div class="text-gray-600 text-xs">
+          <p>
+            Licenciado bajo 
+            <a 
+              href="https://www.gnu.org/licenses/agpl-3.0.html" 
+              target="_blank" 
+              class="text-gray-500 hover:text-accent transition-colors"
+            >
+              AGPL-3.0
+            </a>
+            · 
+            <a 
+              href="https://github.com/ManuMontaraz/ultraligero" 
+              target="_blank" 
+              class="text-gray-500 hover:text-accent transition-colors"
+            >
+              Código fuente en GitHub
+            </a>
+          </p>
+        </div>
       </footer>
     </main>
   </div>

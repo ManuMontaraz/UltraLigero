@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /m/
+Allow: /crear
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://leafpack.mntr.es/sitemap.xml

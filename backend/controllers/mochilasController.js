@@ -487,9 +487,31 @@ const mochilasController = {
     let conn;
     try {
       const { id, objetoId } = req.params;
-      const { cantidad_local, peso_local, precio_local } = req.body;
+      const { cantidad_local, peso_local, precio_local, editPassword, isAdmin } = req.body;
 
       conn = await pool.getConnection();
+
+      // Verificar que la mochila existe
+      const mochila = await conn.query(
+        'SELECT edit_password_hash FROM mochilas WHERE id = ?',
+        [id]
+      );
+
+      if (mochila.length === 0) {
+        return res.status(404).json({ error: 'Mochila no encontrada' });
+      }
+
+      // Verificar contraseña de edición si existe (a menos que sea admin)
+      if (!isAdmin && mochila[0].edit_password_hash) {
+        if (!editPassword) {
+          return res.status(401).json({ error: 'Se requiere contraseña de edición', requirePassword: true });
+        }
+
+        const validPassword = await bcrypt.compare(editPassword, mochila[0].edit_password_hash);
+        if (!validPassword) {
+          return res.status(403).json({ error: 'Contraseña de edición incorrecta' });
+        }
+      }
 
       // Verificar que existe la relación mochila-objeto
       const relacion = await conn.query(
@@ -528,7 +550,7 @@ const mochilasController = {
         values
       );
 
-      res.json({ 
+      res.json({
         message: 'Cambios guardados',
         cambios: { cantidad_local, peso_local, precio_local }
       });
@@ -544,8 +566,31 @@ const mochilasController = {
     let conn;
     try {
       const { id } = req.params;
+      const { editPassword, isAdmin } = req.body;
 
       conn = await pool.getConnection();
+
+      // Verificar que la mochila existe
+      const mochila = await conn.query(
+        'SELECT edit_password_hash FROM mochilas WHERE id = ?',
+        [id]
+      );
+
+      if (mochila.length === 0) {
+        return res.status(404).json({ error: 'Mochila no encontrada' });
+      }
+
+      // Verificar contraseña de edición si existe (a menos que sea admin)
+      if (!isAdmin && mochila[0].edit_password_hash) {
+        if (!editPassword) {
+          return res.status(401).json({ error: 'Se requiere contraseña de edición', requirePassword: true });
+        }
+
+        const validPassword = await bcrypt.compare(editPassword, mochila[0].edit_password_hash);
+        if (!validPassword) {
+          return res.status(403).json({ error: 'Contraseña de edición incorrecta' });
+        }
+      }
 
       // Poner a NULL todos los campos locales de esta mochila
       await conn.query(

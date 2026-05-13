@@ -18,8 +18,9 @@ export function useLocalChanges(fetchDataFn) {
    * @param {number} objetoId - ID del objeto
    * @param {string} field - Campo a cambiar ('cantidad', 'peso', 'precio')
    * @param {any} value - Nuevo valor
+   * @param {string} editPassword - Contraseña de edición (opcional)
    */
-  const updateLocalChange = async (mochilaId, objetoId, field, value) => {
+  const updateLocalChange = async (mochilaId, objetoId, field, value, editPassword = null) => {
     // Actualizar estado local inmediatamente
     if (!localChanges.value[objetoId]) {
       localChanges.value[objetoId] = {}
@@ -44,6 +45,11 @@ export function useLocalChanges(fetchDataFn) {
                       : field === 'precio' ? { precio_local: value || null }
                       : {}
 
+    // Añadir contraseña si se proporcionó
+    if (editPassword) {
+      cambioParaBD.editPassword = editPassword
+    }
+
     // Debounce: cancelar guardado anterior para este objeto
     if (pendingSaves.value[objetoId]) {
       clearTimeout(pendingSaves.value[objetoId])
@@ -59,6 +65,8 @@ export function useLocalChanges(fetchDataFn) {
         delete pendingSaves.value[objetoId]
       } catch (err) {
         console.error('Error guardando cambio local:', err)
+        // Propagar el error para que el componente lo maneje
+        throw err
       }
     }, 500)
   }
@@ -83,8 +91,10 @@ export function useLocalChanges(fetchDataFn) {
 
   /**
    * Limpia todos los cambios locales de una mochila (tanto en BD como en estado)
+   * @param {number} mochilaId - ID de la mochila
+   * @param {string} editPassword - Contraseña de edición (opcional)
    */
-  const clearAllChanges = async (mochilaId) => {
+  const clearAllChanges = async (mochilaId, editPassword = null) => {
     try {
       // Cancelar todos los guardados pendientes
       Object.keys(pendingSaves.value).forEach(key => {
@@ -92,9 +102,16 @@ export function useLocalChanges(fetchDataFn) {
       })
       pendingSaves.value = {}
       
+      // Preparar body con contraseña si se proporcionó
+      const body = {}
+      if (editPassword) {
+        body.editPassword = editPassword
+      }
+      
       // Limpiar en base de datos
       await fetchDataFn(`/mochilas/${mochilaId}/locales`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        body: JSON.stringify(body)
       })
       
       // Limpiar estado local
@@ -103,7 +120,7 @@ export function useLocalChanges(fetchDataFn) {
       return true
     } catch (err) {
       console.error('Error limpiando cambios locales:', err)
-      return false
+      throw err
     }
   }
 

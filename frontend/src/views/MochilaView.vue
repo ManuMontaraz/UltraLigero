@@ -21,15 +21,35 @@
               <p class="text-gray-400 text-sm">{{ mochila.descripcion || 'Sin descripción' }}</p>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <button 
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Contraseña de edición (si la mochila tiene protección) -->
+            <div v-if="mochila.tiene_edit_password" class="flex items-center gap-2">
+              <input
+                v-model="editPasswordMochila"
+                type="password"
+                placeholder="Contraseña de edición"
+                class="input w-32 sm:w-40 text-sm"
+                :class="{ 'border-yellow-500': camposBloqueados }"
+              >
+              <span v-if="editPasswordMochila" class="text-green-500 text-xs">✓</span>
+            </div>
+
+            <!-- Mensaje cuando campos están bloqueados -->
+            <div v-if="camposBloqueados" class="text-yellow-500 text-xs">
+              ⚠️ Introduce la contraseña para editar
+            </div>
+
+            <button
               v-if="hasLocalChanges"
-               @click="clearAllChangesHandler"
+              @click="clearAllChangesHandler"
               class="btn-secondary text-sm"
+              :disabled="camposBloqueados"
+              :class="{ 'opacity-50 cursor-not-allowed': camposBloqueados }"
+              :title="camposBloqueados ? 'Introduce la contraseña de edición primero' : ''"
             >
               Limpiar cambios
             </button>
-            <button 
+            <button
               @click="showAddModal = true"
               class="btn-primary flex items-center gap-2"
             >
@@ -192,13 +212,16 @@
                 <div class="text-right">
                   <div class="text-gray-400 text-xs">Cantidad</div>
                   <div class="flex items-center gap-2">
-                    <input 
+                    <input
                       v-model.number="cantidadesLocales[obj.id]"
                       type="number"
                       min="1"
                       class="input w-16 text-right text-sm py-1"
+                      :class="{ 'opacity-50 cursor-not-allowed': camposBloqueados }"
                       placeholder="1"
                       @change="updateCantidad(obj.id)"
+                      :disabled="camposBloqueados"
+                      :title="camposBloqueados ? 'Introduce la contraseña de edición primero' : ''"
                     >
                     <span class="text-gray-500 text-sm">u</span>
                   </div>
@@ -207,12 +230,15 @@
                 <div class="text-right">
                   <div class="text-gray-400 text-xs">Peso</div>
                   <div class="flex items-center gap-2">
-                    <input 
+                    <input
                       v-model.number="pesosLocales[obj.id]"
                       type="number"
                       class="input w-20 text-right text-sm py-1"
+                      :class="{ 'opacity-50 cursor-not-allowed': camposBloqueados }"
                       placeholder="g"
                       @change="updatePeso(obj.id)"
+                      :disabled="camposBloqueados"
+                      :title="camposBloqueados ? 'Introduce la contraseña de edición primero' : ''"
                     >
                     <span class="text-gray-500 text-sm">g</span>
                   </div>
@@ -224,13 +250,16 @@
                 <div class="text-right">
                   <div class="text-gray-400 text-xs">Precio</div>
                   <div class="flex items-center gap-2">
-                    <input 
+                    <input
                       v-model.number="preciosLocales[obj.id]"
                       type="number"
                       step="0.01"
                       class="input w-24 text-right text-sm py-1"
+                      :class="{ 'opacity-50 cursor-not-allowed': camposBloqueados }"
                       placeholder="€"
                       @change="updatePrecio(obj.id)"
+                      :disabled="camposBloqueados"
+                      :title="camposBloqueados ? 'Introduce la contraseña de edición primero' : ''"
                     >
                     <span class="text-gray-500 text-sm">€</span>
                   </div>
@@ -414,16 +443,6 @@
           No hay objetos disponibles
         </div>
 
-        <!-- Password para editar mochila -->
-        <div v-if="mochila.tiene_edit_password" class="mt-6 pt-6 border-t border-dark-border">
-          <label class="block text-sm text-gray-400 mb-2">Contraseña de edición de la mochila</label>
-          <input 
-            v-model="editPasswordMochila"
-            type="password"
-            placeholder="Requerida para modificar"
-            class="input"
-          >
-        </div>
       </div>
     </div>
 
@@ -593,22 +612,27 @@ const gruposConObjetos = computed(() => {
 
 const pesoTotal = computed(() => {
   return objetos.value.reduce((total, obj) => {
-    // Los valores ya vienen aplicados desde el backend
-    return total + (obj.peso_gr * obj.cantidad)
+    // Usar valor local si existe, sino el del backend
+    const peso = pesosLocales.value[obj.id] !== undefined ? pesosLocales.value[obj.id] : obj.peso_gr
+    const cantidad = cantidadesLocales.value[obj.id] !== undefined ? cantidadesLocales.value[obj.id] : obj.cantidad
+    return total + (peso * cantidad)
   }, 0)
 })
 
 const precioTotal = computed(() => {
   return objetos.value.reduce((total, obj) => {
-    // Los valores ya vienen aplicados desde el backend
-    return total + (obj.precio * obj.cantidad)
+    // Usar valor local si existe, sino el del backend
+    const precio = preciosLocales.value[obj.id] !== undefined ? preciosLocales.value[obj.id] : obj.precio
+    const cantidad = cantidadesLocales.value[obj.id] !== undefined ? cantidadesLocales.value[obj.id] : obj.cantidad
+    return total + (precio * cantidad)
   }, 0)
 })
 
 const totalObjetos = computed(() => {
   return objetos.value.reduce((total, obj) => {
-    // Los valores ya vienen aplicados desde el backend
-    return total + obj.cantidad
+    // Usar valor local si existe, sino el del backend
+    const cantidad = cantidadesLocales.value[obj.id] !== undefined ? cantidadesLocales.value[obj.id] : obj.cantidad
+    return total + cantidad
   }, 0)
 })
 
@@ -991,42 +1015,89 @@ const handleFileUpload = (event) => {
   imagenFile.value = event.target.files[0]
 }
 
-const updatePeso = (id) => {
+// Computed para saber si los campos de edición están bloqueados
+const camposBloqueados = computed(() => {
+  // Si la mochila tiene contraseña de edición Y no se ha introducido contraseña
+  return mochila.value.tiene_edit_password && !editPasswordMochila.value
+})
+
+const updatePeso = async (id) => {
   const value = pesosLocales.value[id]
-  updateLocalChange(mochila.value.id, id, 'peso', value)
+  try {
+    await updateLocalChange(mochila.value.id, id, 'peso', value, editPasswordMochila.value)
+  } catch (err) {
+    if (err.message?.includes('Contraseña') || err.message?.includes('contraseña')) {
+      showToast('Contraseña de edición requerida', 'error')
+      // Revertir el cambio visual al valor original
+      const obj = objetos.value.find(o => o.id === id)
+      if (obj) {
+        pesosLocales.value[id] = obj.peso_gr
+      }
+    }
+  }
 }
 
-const updatePrecio = (id) => {
+const updatePrecio = async (id) => {
   const value = preciosLocales.value[id]
-  updateLocalChange(mochila.value.id, id, 'precio', value)
+  try {
+    await updateLocalChange(mochila.value.id, id, 'precio', value, editPasswordMochila.value)
+  } catch (err) {
+    if (err.message?.includes('Contraseña') || err.message?.includes('contraseña')) {
+      showToast('Contraseña de edición requerida', 'error')
+      // Revertir el cambio visual al valor original
+      const obj = objetos.value.find(o => o.id === id)
+      if (obj) {
+        preciosLocales.value[id] = obj.precio
+      }
+    }
+  }
 }
 
-const updateCantidad = (id) => {
+const updateCantidad = async (id) => {
   const value = cantidadesLocales.value[id]
-  updateLocalChange(mochila.value.id, id, 'cantidad', value)
+  try {
+    await updateLocalChange(mochila.value.id, id, 'cantidad', value, editPasswordMochila.value)
+  } catch (err) {
+    if (err.message?.includes('Contraseña') || err.message?.includes('contraseña')) {
+      showToast('Contraseña de edición requerida', 'error')
+      // Revertir el cambio visual al valor original
+      const obj = objetos.value.find(o => o.id === id)
+      if (obj) {
+        cantidadesLocales.value[id] = obj.cantidad
+      }
+    }
+  }
 }
 
 const calcularPesoGrupo = (grupo) => {
   return grupo.objetos.reduce((total, obj) => {
-    // Los valores ya vienen aplicados desde el backend
-    return total + (obj.peso_gr * obj.cantidad)
+    // Usar valor local si existe, sino el del backend
+    const peso = pesosLocales.value[obj.id] !== undefined ? pesosLocales.value[obj.id] : obj.peso_gr
+    const cantidad = cantidadesLocales.value[obj.id] !== undefined ? cantidadesLocales.value[obj.id] : obj.cantidad
+    return total + (peso * cantidad)
   }, 0)
 }
 
 const calcularPrecioGrupo = (grupo) => {
   return grupo.objetos.reduce((total, obj) => {
-    // Los valores ya vienen aplicados desde el backend
-    return total + (obj.precio * obj.cantidad)
+    // Usar valor local si existe, sino el del backend
+    const precio = preciosLocales.value[obj.id] !== undefined ? preciosLocales.value[obj.id] : obj.precio
+    const cantidad = cantidadesLocales.value[obj.id] !== undefined ? cantidadesLocales.value[obj.id] : obj.cantidad
+    return total + (precio * cantidad)
   }, 0)
 }
 
 const clearAllChangesHandler = async () => {
-  const success = await clearAllChanges(mochila.value.id)
-  if (success) {
+  try {
+    await clearAllChanges(mochila.value.id, editPasswordMochila.value)
     showToast('Cambios eliminados')
     await cargarMochila()
-  } else {
-    showToast('Error al eliminar cambios', 'error')
+  } catch (err) {
+    if (err.message?.includes('Contraseña') || err.message?.includes('contraseña')) {
+      showToast('Se requiere contraseña de edición', 'error')
+    } else {
+      showToast('Error al eliminar cambios', 'error')
+    }
   }
 }
 

@@ -18,13 +18,7 @@
             Responsable del sitio
           </h2>
           <p class="text-gray-300 leading-relaxed">
-            <a
-              :href="authorWeb"
-              target="_blank"
-              class="text-accent hover:underline"
-            >
-              {{ authorName }}
-            </a>
+            Nombre: {{ authorName }}
             <br>
             Email: 
             <a 

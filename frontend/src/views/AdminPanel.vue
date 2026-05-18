@@ -86,13 +86,19 @@
               <textarea v-model="nuevaMochila.descripcion" placeholder="Descripción" class="input resize-none" rows="2"></textarea>
             </div>
             <div>
-              <input v-model.number="nuevaMochila.capacidad_kg" type="number" step="0.1" placeholder="Capacidad (kg)" class="input">
-            </div>
-            <div>
               <input v-model="nuevaMochila.editPassword" type="password" placeholder="Contraseña de edición (opcional)" class="input">
             </div>
-            <div>
-              <input v-model="nuevaMochila.viewPassword" type="password" placeholder="Contraseña de visualización (opcional)" class="input">
+            <div class="flex items-center gap-2">
+              <input 
+                v-model="nuevaMochila.isPrivate" 
+                type="checkbox" 
+                id="isPrivateNew"
+                class="w-4 h-4 rounded border-border bg-bg text-primary focus:ring-primary"
+                :disabled="!nuevaMochila.editPassword"
+              >
+              <label for="isPrivateNew" class="text-sm text-text-secondary" :class="{ 'opacity-50': !nuevaMochila.editPassword }">
+                Mochila privada
+              </label>
             </div>
             <div class="md:col-span-2">
               <button type="submit" class="btn-primary" :disabled="loadingMochila">
@@ -111,7 +117,6 @@
                 <tr>
                   <th class="text-left p-4 text-text-secondary font-medium">Código</th>
                   <th class="text-left p-4 text-text-secondary font-medium">Nombre</th>
-                  <th class="text-left p-4 text-text-secondary font-medium">Capacidad</th>
                   <th class="text-left p-4 text-text-secondary font-medium">Seguridad</th>
                   <th class="text-left p-4 text-text-secondary font-medium">Creada</th>
                   <th class="text-right p-4 text-text-secondary font-medium">Acciones</th>
@@ -125,12 +130,11 @@
                     </router-link>
                   </td>
                   <td class="p-4 text-text-primary">{{ mochila.nombre }}</td>
-                  <td class="p-4 text-text-secondary">{{ mochila.capacidad_kg }} kg</td>
                   <td class="p-4">
                     <div class="flex gap-2">
                       <span v-if="mochila.tiene_edit_password" class="text-xs px-2 py-1 bg-warning/20 text-warning rounded">Edit</span>
-                      <span v-if="mochila.tiene_password" class="text-xs px-2 py-1 bg-danger/20 text-danger rounded">View</span>
-                      <span v-if="!mochila.tiene_password && !mochila.tiene_edit_password" class="text-xs px-2 py-1 bg-success/20 text-success rounded">Pública</span>
+                      <span v-if="mochila.is_private" class="text-xs px-2 py-1 bg-danger/20 text-danger rounded">Privada</span>
+                      <span v-if="!mochila.tiene_edit_password && !mochila.is_private" class="text-xs px-2 py-1 bg-success/20 text-success rounded">Pública</span>
                     </div>
                   </td>
                   <td class="p-4 text-text-secondary text-sm">{{ formatDate(mochila.created_at) }}</td>
@@ -272,10 +276,6 @@
             <label class="block text-sm text-text-secondary mb-1">Descripción</label>
             <textarea v-model="editMochilaForm.descripcion" class="input resize-none" rows="2"></textarea>
           </div>
-          <div>
-            <label class="block text-sm text-text-secondary mb-1">Capacidad (kg)</label>
-            <input v-model.number="editMochilaForm.capacidad_kg" type="number" step="0.1" class="input">
-          </div>
           <div class="border-t border-border pt-4 mt-4">
             <h4 class="text-sm font-medium text-text-primary mb-3">Contraseñas (dejar vacío para mantener actual)</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -303,29 +303,17 @@
                   Se eliminará
                 </span>
               </div>
-              <div class="relative">
-                <label class="block text-sm text-text-secondary mb-1">Contraseña de visualización</label>
+              <div class="flex items-center gap-2 mt-4">
                 <input 
-                  v-model="editMochilaForm.newViewPassword" 
-                  type="password" 
-                  placeholder="Nueva contraseña (vacío = mantener)" 
-                  class="input pr-20"
-                  :class="{ 'border-danger': editMochilaForm.deleteViewPassword }"
+                  v-model="editMochilaForm.isPrivate" 
+                  type="checkbox" 
+                  id="isPrivateEdit"
+                  class="w-4 h-4 rounded border-border bg-bg text-primary focus:ring-primary"
+                  :disabled="!editMochilaForm.tiene_edit_password"
                 >
-                <button 
-                  v-if="editMochilaForm.tiene_password && !editMochilaForm.deleteViewPassword"
-                  @click="marcarEliminarPassword('mochila', 'view')"
-                  type="button"
-                  class="absolute right-2 top-[26px] text-xs text-danger hover:text-red-600 px-2 py-1 rounded hover:bg-danger/10"
-                >
-                  Eliminar
-                </button>
-                <span 
-                  v-if="editMochilaForm.deleteViewPassword"
-                  class="absolute right-2 top-[26px] text-xs text-danger font-medium"
-                >
-                  Se eliminará
-                </span>
+                <label for="isPrivateEdit" class="text-sm text-text-secondary" :class="{ 'opacity-50': !editMochilaForm.tiene_edit_password }">
+                  Mochila privada (requiere contraseña para ver)
+                </label>
               </div>
             </div>
           </div>
@@ -451,9 +439,8 @@ const grupos = ref([])
 const nuevaMochila = ref({
   nombre: '',
   descripcion: '',
-  capacidad_kg: null,
   editPassword: '',
-  viewPassword: ''
+  isPrivate: false
 })
 const loadingMochila = ref(false)
 
@@ -477,9 +464,8 @@ const editMochilaForm = ref({
   id: null,
   nombre: '',
   descripcion: '',
-  capacidad_kg: null,
   newEditPassword: '',
-  newViewPassword: ''
+  isPrivate: false
 })
 
 const showEditObjetoModal = ref(false)
@@ -507,6 +493,7 @@ const iconos = {
   bolt: '⚡',
   apple: '🍎',
   document: '📄',
+  moon: '🌙',
   box: '📦'
 }
 
@@ -591,13 +578,12 @@ const crearMochilaAdmin = async () => {
       body: JSON.stringify({
         nombre: nuevaMochila.value.nombre,
         descripcion: nuevaMochila.value.descripcion,
-        capacidad_kg: nuevaMochila.value.capacidad_kg,
         editPassword: nuevaMochila.value.editPassword || null,
-        viewPassword: nuevaMochila.value.viewPassword || null
+        isPrivate: nuevaMochila.value.isPrivate
       })
     })
     
-    nuevaMochila.value = { nombre: '', descripcion: '', capacidad_kg: null, editPassword: '', viewPassword: '' }
+    nuevaMochila.value = { nombre: '', descripcion: '', editPassword: '', isPrivate: false }
     await cargarMochilas()
     alert('Mochila creada exitosamente')
   } catch (err) {
@@ -654,15 +640,12 @@ const abrirEditarMochila = (mochila) => {
     id: mochila.id,
     nombre: mochila.nombre,
     descripcion: mochila.descripcion || '',
-    capacidad_kg: mochila.capacidad_kg,
     newEditPassword: '',
-    newViewPassword: '',
-    // Flags para saber si tiene contraseñas actualmente
+    // Flags para saber si tiene contraseña y privacidad actualmente
     tiene_edit_password: mochila.tiene_edit_password,
-    tiene_password: mochila.tiene_password, // Backend usa tiene_password para view_password
-    // Flags para marcar eliminación
-    deleteEditPassword: false,
-    deleteViewPassword: false
+    isPrivate: mochila.is_private || false,
+    // Flag para marcar eliminación
+    deleteEditPassword: false
   }
   showEditMochilaModal.value = true
 }
@@ -674,7 +657,6 @@ const guardarMochila = async () => {
     const body = {
       nombre: editMochilaForm.value.nombre,
       descripcion: editMochilaForm.value.descripcion,
-      capacidad_kg: editMochilaForm.value.capacidad_kg,
       isAdmin: true
     }
 
@@ -688,15 +670,8 @@ const guardarMochila = async () => {
     }
     // Si está vacío, no enviamos el campo (mantener actual)
 
-    // Manejar contraseña de visualización
-    if (editMochilaForm.value.deleteViewPassword) {
-      // Explicitamente null = eliminar
-      body.newViewPassword = null
-    } else if (editMochilaForm.value.newViewPassword) {
-      // Hay valor = actualizar
-      body.newViewPassword = editMochilaForm.value.newViewPassword
-    }
-    // Si está vacío, no enviamos el campo (mantener actual)
+    // Manejar privacidad
+    body.isPrivate = editMochilaForm.value.isPrivate || false
 
     await fetchData(`/admin/mochilas/${editMochilaForm.value.id}`, {
       method: 'PUT',
@@ -788,9 +763,6 @@ const marcarEliminarPassword = (tipo, passwordType) => {
     if (passwordType === 'edit') {
       editMochilaForm.value.deleteEditPassword = true
       editMochilaForm.value.newEditPassword = ''
-    } else if (passwordType === 'view') {
-      editMochilaForm.value.deleteViewPassword = true
-      editMochilaForm.value.newViewPassword = ''
     }
   } else if (tipo === 'objeto') {
     editObjetoForm.value.deleteEditPassword = true

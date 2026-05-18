@@ -13,11 +13,12 @@ const initDatabase = async () => {
         codigo VARCHAR(10) UNIQUE NOT NULL,
         nombre VARCHAR(255) NOT NULL,
         descripcion TEXT,
-        capacidad_kg DECIMAL(8,2) DEFAULT 0,
         edit_password_hash VARCHAR(255),
-        view_password_hash VARCHAR(255),
+        is_private BOOLEAN DEFAULT FALSE,
+        parent_id INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (parent_id) REFERENCES mochilas(id) ON DELETE SET NULL
       )
     `);
 
@@ -101,6 +102,34 @@ const initDatabase = async () => {
       // Columna ya existe
     }
 
+    // Migración: eliminar view_password_hash y añadir is_private si no existe
+    try {
+      await conn.query('ALTER TABLE mochilas DROP COLUMN view_password_hash');
+      console.log('Columna view_password_hash eliminada de mochilas');
+    } catch (e) {
+      // Columna no existía
+    }
+    try {
+      await conn.query('ALTER TABLE mochilas ADD COLUMN is_private BOOLEAN DEFAULT FALSE');
+      console.log('Columna is_private añadida a mochilas');
+    } catch (e) {
+      // Columna ya existe
+    }
+
+    // Migración: añadir parent_id si no existe
+    try {
+      await conn.query('ALTER TABLE mochilas ADD COLUMN parent_id INT');
+      console.log('Columna parent_id añadida a mochilas');
+    } catch (e) {
+      // Columna ya existe
+    }
+    try {
+      await conn.query('ALTER TABLE mochilas ADD FOREIGN KEY (parent_id) REFERENCES mochilas(id) ON DELETE SET NULL');
+      console.log('Foreign key parent_id añadida a mochilas');
+    } catch (e) {
+      // FK ya existe
+    }
+
     // Insertar grupos predefinidos si no existen
     const gruposExistentes = await conn.query('SELECT COUNT(*) as count FROM grupos');
     if (gruposExistentes[0].count === 0) {
@@ -111,7 +140,8 @@ const initDatabase = async () => {
         { nombre: 'Electrónica', icono: 'bolt', color: 'yellow', orden: 4 },
         { nombre: 'Comida', icono: 'apple', color: 'green', orden: 5 },
         { nombre: 'Documentación', icono: 'document', color: 'red', orden: 6 },
-        { nombre: 'Otros', icono: 'box', color: 'gray', orden: 7 }
+        { nombre: 'Descanso', icono: 'moon', color: 'indigo', orden: 7 },
+        { nombre: 'Otros', icono: 'box', color: 'gray', orden: 8 }
       ];
 
       for (const grupo of gruposPredefinidos) {
@@ -121,6 +151,35 @@ const initDatabase = async () => {
         );
       }
       console.log('Grupos predefinidos insertados');
+    }
+
+    // Migración: añadir grupo Descanso si no existe
+    try {
+      const descansoExistente = await conn.query('SELECT id FROM grupos WHERE nombre = ?', ['Descanso']);
+      if (descansoExistente.length === 0) {
+        await conn.query(
+          'INSERT INTO grupos (nombre, icono, color, orden) VALUES (?, ?, ?, ?)',
+          ['Descanso', 'moon', 'indigo', 7]
+        );
+        console.log('Grupo Descanso añadido');
+        
+        // Actualizar orden de Otros a 8
+        await conn.query(
+          'UPDATE grupos SET orden = ? WHERE nombre = ?',
+          [8, 'Otros']
+        );
+        console.log('Orden de grupo Otros actualizado a 8');
+      }
+    } catch (e) {
+      console.error('Error añadiendo grupo Descanso:', e);
+    }
+
+    // Migración: eliminar capacidad_kg si existe
+    try {
+      await conn.query('ALTER TABLE mochilas DROP COLUMN capacidad_kg');
+      console.log('Columna capacidad_kg eliminada de mochilas');
+    } catch (e) {
+      // Columna no existía o ya fue eliminada
     }
 
     console.log('✅ Base de datos inicializada correctamente');

@@ -15,4 +15,11 @@ router.delete('/:id/objetos/:objetoId', mochilasController.removeObjeto);
 router.put('/:id/objetos/:objetoId/locales', mochilasController.saveLocalChanges);
 router.delete('/:id/locales', mochilasController.clearLocalChanges);
 
+// Editar/eliminar mochila (usuarios normales con contraseña)
+router.put('/:id', mochilasController.update);
+router.delete('/:id', mochilasController.delete);
+
+// Clonar mochila
+router.post('/:id/clone', mochilasController.clone);
+
 module.exports = router;

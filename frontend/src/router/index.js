@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import MochilaView from '../views/MochilaView.vue'
 import CrearMochila from '../views/CrearMochila.vue'
 import AdminPanel from '../views/AdminPanel.vue'
+import Privacidad from '../views/Privacidad.vue'
 
 const routes = [
   {
@@ -24,6 +25,11 @@ const routes = [
     path: '/admin',
     name: 'Admin',
     component: AdminPanel
+  },
+  {
+    path: '/privacidad',
+    name: 'Privacidad',
+    component: Privacidad
   },
   {
     path: '/:pathMatch(.*)*',

@@ -1,6 +1,8 @@
 const pool = require('../config/database');
 const { addAffiliateTag } = require('../utils/helpers');
 const { convertBigInt } = require('../utils/serializer');
+const { processImage } = require('../utils/processImage');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 
 const objetosController = {
@@ -114,7 +116,14 @@ const objetosController = {
       console.log('isAdmin:', req.isAdmin);
       
       const { nombre, descripcion, peso_gr, precio, url_compra, grupo_id, editPassword, mochilaEditPassword } = req.body;
-      const imagen_url = req.file ? `/uploads/objetos/${req.file.filename}` : null;
+      
+      // Procesar imagen: convertir a WebP y redimensionar
+      let imagen_url = null;
+      if (req.file) {
+        const processedPath = await processImage(req.file.path);
+        imagen_url = `/uploads/objetos/${path.basename(processedPath)}`;
+      }
+      
       const isAdmin = req.isAdmin || req.body.isAdmin || false;
 
       if (!nombre || nombre.trim() === '') {
@@ -186,7 +195,14 @@ const objetosController = {
     try {
       const { id } = req.params;
       const { nombre, descripcion, peso_gr, precio, url_compra, grupo_id, editPassword, newEditPassword } = req.body;
-      const imagen_url = req.file ? `/uploads/objetos/${req.file.filename}` : undefined;
+      
+      // Procesar imagen: convertir a WebP y redimensionar
+      let imagen_url = undefined;
+      if (req.file) {
+        const processedPath = await processImage(req.file.path);
+        imagen_url = `/uploads/objetos/${path.basename(processedPath)}`;
+      }
+      
       const isAdmin = req.isAdmin || req.body.isAdmin || false;
 
       conn = await pool.getConnection();

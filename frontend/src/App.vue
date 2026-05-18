@@ -1,9 +1,10 @@
 <template>
   <div id="app" class="min-h-screen flex flex-col">
     <router-view />
+    <Footer />
   </div>
 </template>
 
 <script setup>
-// App root component
+import Footer from './components/Footer.vue'
 </script>

@@ -6,10 +6,10 @@ router.get('/', async (req, res) => {
   try {
     const conn = await pool.getConnection();
     
-    // Obtener todas las mochilas públicas (sin contraseña de visualización)
+    // Obtener todas las mochilas públicas (no privadas)
     const mochilas = await conn.query(
       `SELECT codigo, updated_at FROM mochilas 
-       WHERE view_password_hash IS NULL 
+       WHERE is_private = FALSE OR is_private IS NULL
        ORDER BY updated_at DESC`
     );
     

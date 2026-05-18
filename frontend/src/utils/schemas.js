@@ -41,7 +41,7 @@ export const generateBackpackSchema = (mochila, objetos) => {
 export const generateOrganizationSchema = () => ({
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "LeafPack",
+  "name": import.meta.env.VITE_APP_NAME || 'LeafPack',
   "url": "https://leafpack.mntr.es",
   "logo": "https://leafpack.mntr.es/logo.png",
   "sameAs": []
@@ -50,7 +50,7 @@ export const generateOrganizationSchema = () => ({
 export const generateWebSiteSchema = () => ({
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "LeafPack",
+  "name": import.meta.env.VITE_APP_NAME || 'LeafPack',
   "url": "https://leafpack.mntr.es",
   "description": "Gestiona tu equipaje ultraligero. Calcula peso, precio y organiza objetos por categorías.",
   "potentialAction": {

@@ -16,7 +16,8 @@
                 <span class="px-2 py-1 bg-accent/20 text-accent rounded text-sm font-mono">
                   {{ mochila.codigo }}
                 </span>
-                <span v-if="mochila.tiene_edit_password" class="text-yellow-500 text-sm" title="Protegida con contraseña">🔒</span>
+                <span v-if="mochila.is_private" class="text-red-500 text-sm" title="Mochila privada">🔒</span>
+                <span v-else-if="mochila.tiene_edit_password" class="text-yellow-500 text-sm" title="Protegida con contraseña">🔒</span>
               </div>
               <p class="text-gray-400 text-sm">{{ mochila.descripcion || 'Sin descripción' }}</p>
             </div>
@@ -63,20 +64,32 @@
       </div>
     </header>
 
+    <!-- Migas de pan (clonada desde) -->
+    <div v-if="mochila.parent_id" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-0">
+      <div class="flex items-center gap-2 text-sm text-gray-400">
+        <span>clon de:</span>
+        <router-link 
+          v-if="mochila.parent_codigo" 
+          :to="`/m/${mochila.parent_codigo}`" 
+          class="text-accent hover:underline"
+        >
+          {{ mochila.parent_nombre }}
+        </router-link>
+        <span v-else class="text-gray-500">Mochila eliminada</span>
+      </div>
+    </div>
+
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <!-- Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div class="card">
           <div class="text-gray-400 text-sm mb-1">Peso Total</div>
-          <div class="text-3xl font-bold" :class="pesoExcedido ? 'text-red-500' : 'text-white'">
+          <div class="text-3xl font-bold text-white">
             {{ pesoTotal.toFixed(0) }}g
-            <span v-if="mochila.capacidad_kg > 0" class="text-lg text-gray-500">
-              / {{ (mochila.capacidad_kg * 1000).toFixed(0) }}g
+            <span v-if="pesoTotal >= 1000" class="text-lg text-gray-400">
+              ({{ (pesoTotal / 1000).toFixed(2) }}kg)
             </span>
-          </div>
-          <div v-if="pesoExcedido" class="text-red-400 text-sm mt-1">
-            ⚠️ Excede capacidad
           </div>
         </div>
         <div class="card">
@@ -96,23 +109,23 @@
         </div>
       </div>
 
-      <!-- Password Modal (Mochila protegida) -->
-      <div v-if="showPasswordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="card max-w-md w-full mx-4">
-          <h3 class="text-lg font-semibold text-white mb-4">Contraseña requerida</h3>
-          <p class="text-gray-400 mb-4">Esta mochila está protegida. Introduce la contraseña para verla.</p>
-          <input 
-            v-model="viewPassword"
-            type="password"
-            placeholder="Contraseña"
-            class="input mb-4"
-          >
-          <div class="flex gap-3">
-            <button @click="$router.push('/')" class="btn-secondary flex-1">Cancelar</button>
-            <button @click="cargarMochilaConPassword" class="btn-primary flex-1">Acceder</button>
-          </div>
+    <!-- Password Modal (Mochila privada) -->
+    <div v-if="showPasswordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="card max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-white mb-4">Mochila privada</h3>
+        <p class="text-gray-400 mb-4">Esta mochila es privada. Introduce la contraseña de edición para acceder.</p>
+        <input 
+          v-model="editPasswordMochila"
+          type="password"
+          placeholder="Contraseña de edición"
+          class="input mb-4"
+        >
+        <div class="flex gap-3">
+          <button @click="$router.push('/')" class="btn-secondary flex-1">Cancelar</button>
+          <button @click="cargarMochilaConPassword" class="btn-primary flex-1">Acceder</button>
         </div>
       </div>
+    </div>
 
       <!-- Password Modal (Editar objeto) -->
       <div v-if="showObjetoPasswordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -302,29 +315,6 @@
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
       </div>
 
-      <!-- Footer -->
-      <footer class="mt-16 text-center pb-8">
-        <div class="text-gray-600 text-xs">
-          <p>
-            Licenciado bajo
-            <a
-              href="https://www.gnu.org/licenses/agpl-3.0.html"
-              target="_blank"
-              class="text-gray-500 hover:text-accent transition-colors"
-            >
-              AGPL-3.0
-            </a>
-            ·
-            <a
-              href="https://github.com/ManuMontaraz/ultraligero"
-              target="_blank"
-              class="text-gray-500 hover:text-accent transition-colors"
-            >
-              Código fuente en GitHub
-            </a>
-          </p>
-        </div>
-      </footer>
     </main>
 
     <!-- Modal Añadir Objeto -->
@@ -500,13 +490,180 @@
             </button>
           </div>
         </form>
+
+        <!-- Zona de peligro - Eliminar objeto permanentemente -->
+        <div class="mt-6 pt-6 border-t border-red-900/50">
+          <div class="bg-red-900/20 border border-red-800 rounded-lg p-4">
+            <h4 class="text-sm font-medium text-red-400 mb-2">Zona de peligro</h4>
+            <p class="text-gray-400 text-sm mb-3">Eliminar este objeto permanentemente de la base de datos</p>
+            
+            <div v-if="!showDeleteObjetoConfirm">
+              <button 
+                @click="showDeleteObjetoConfirm = true"
+                class="text-red-500 hover:text-red-400 text-sm font-medium px-3 py-2 rounded border border-red-800 hover:bg-red-900/30 transition-colors"
+              >
+                Eliminar objeto permanentemente
+              </button>
+            </div>
+            <div v-else class="space-y-3">
+              <p class="text-red-400 text-sm">¿Eliminar de todas las mochilas? Esta acción no se puede deshacer.</p>
+              <div class="flex gap-3">
+                <button 
+                  @click="showDeleteObjetoConfirm = false"
+                  class="btn-secondary flex-1 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  @click="executeDeleteObjeto"
+                  class="flex-1 text-sm bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded transition-colors"
+                  :disabled="loadingDeleteObjeto"
+                >
+                  {{ loadingDeleteObjeto ? 'Eliminando...' : 'Sí, eliminar' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAB Editar Mochila -->
+    <button
+      @click="openEditMochilaModal"
+      class="fixed bottom-4 right-4 w-14 h-14 rounded-full bg-dark-card border border-dark-border text-accent hover:bg-dark-bg shadow-lg flex items-center justify-center z-50 transition-colors"
+      title="Editar mochila"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </button>
+
+    <!-- Modal Editar Mochila -->
+    <div v-if="showEditMochilaModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="card max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-lg font-semibold text-white">Editar Mochila</h3>
+          <button @click="showEditMochilaModal = false" class="text-gray-400 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="saveMochilaChanges" class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Nombre</label>
+            <input v-model="editMochilaForm.nombre" type="text" class="input" required>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Descripción</label>
+            <textarea v-model="editMochilaForm.descripcion" class="input resize-none" rows="2"></textarea>
+          </div>
+          <div v-if="mochila.tiene_edit_password" class="flex items-center gap-2 pt-2">
+            <input 
+              v-model="editMochilaForm.isPrivate" 
+              type="checkbox" 
+              id="editIsPrivate"
+              class="w-4 h-4 rounded border-gray-600 bg-dark-card text-accent focus:ring-accent"
+            >
+            <label for="editIsPrivate" class="text-sm text-gray-300">
+              Mochila privada (requiere contraseña para ver)
+            </label>
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button type="button" @click="showEditMochilaModal = false" class="btn-secondary flex-1">Cancelar</button>
+            <button type="submit" class="btn-primary flex-1" :disabled="loadingEditMochila">
+              {{ loadingEditMochila ? 'Guardando...' : 'Guardar Cambios' }}
+            </button>
+          </div>
+        </form>
+
+        <!-- Clonar mochila -->
+        <div class="mt-4 pt-4 border-t border-dark-border">
+          <!-- Botón para mostrar formulario de clonación -->
+          <button 
+            v-if="!showCloneForm"
+            @click="showCloneForm = true; clonePassword = ''"
+            class="w-full btn-secondary flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Clonar como nueva mochila
+          </button>
+          
+          <!-- Formulario de clonación -->
+          <div v-else class="p-3 bg-dark-bg rounded-lg border border-dark-border">
+            <p class="text-gray-400 text-sm mb-2">Configurar nueva mochila</p>
+            <input 
+              v-model="clonePassword" 
+              type="password" 
+              placeholder="Nueva contraseña (opcional)"
+              class="input text-sm w-full mb-2"
+            >
+            <p class="text-gray-500 text-xs mb-3">
+              Deja vacío para crear sin contraseña (será pública)
+            </p>
+            <div class="flex gap-2">
+              <button 
+                @click="showCloneForm = false; clonePassword = ''"
+                class="btn-secondary text-sm flex-1"
+              >
+                Cancelar
+              </button>
+              <button 
+                @click="executeClone"
+                class="btn-primary text-sm flex-1"
+                :disabled="loadingClone"
+              >
+                {{ loadingClone ? 'Clonando...' : 'Clonar ahora' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zona de peligro -->
+        <div class="mt-6 pt-6 border-t border-red-900/50">
+          <div class="bg-red-900/20 border border-red-800 rounded-lg p-4">
+            <h4 class="text-sm font-medium text-red-400 mb-2">Zona de peligro</h4>
+            <p class="text-gray-400 text-sm mb-3">Eliminar permanentemente esta mochila y todos sus objetos</p>
+            
+            <div v-if="!showDeleteConfirm">
+              <button 
+                @click="showDeleteConfirm = true"
+                class="text-red-500 hover:text-red-400 text-sm font-medium px-3 py-2 rounded border border-red-800 hover:bg-red-900/30 transition-colors"
+              >
+                Eliminar mochila
+              </button>
+            </div>
+            <div v-else class="space-y-3">
+              <p class="text-red-400 text-sm">¿Eliminar permanentemente esta mochila?</p>
+              <div class="flex gap-3">
+                <button 
+                  @click="showDeleteConfirm = false"
+                  class="btn-secondary flex-1 text-sm"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  @click="executeDelete"
+                  class="flex-1 text-sm bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded transition-colors"
+                  :disabled="loadingDelete"
+                >
+                  {{ loadingDelete ? 'Eliminando...' : 'Sí, eliminar' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Toast -->
     <div 
       v-if="toast.message" 
-      class="fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg transition-all"
+      class="fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg transition-all z-[100]"
       :class="toast.type === 'error' ? 'bg-red-500' : 'bg-accent'"
     >
       {{ toast.message }}
@@ -516,13 +673,14 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '../composables/useApi.js'
 import { useLocalChanges } from '../composables/useLocalChanges.js'
 import { useSEO } from '../composables/useSEO.js'
 import { generateBackpackSchema } from '../utils/schemas.js'
 
 const route = useRoute()
+const router = useRouter()
 const { fetchData, uploadFile, loading } = useApi()
 const { localChanges, updateLocalChange, getEffectiveValue, hasLocalChange, clearAllChanges, initializeFromLoadedData } = useLocalChanges(fetchData)
 
@@ -533,7 +691,6 @@ const gruposDisponibles = ref([])
 const showAddModal = ref(false)
 const showPasswordModal = ref(false)
 const showObjetoPasswordModal = ref(false)
-const viewPassword = ref('')
 const mochilaPassword = ref('') // Guardamos la contraseña de la mochila para herencia
 const editPasswordMochila = ref('')
 const searchQuery = ref('')
@@ -575,6 +732,22 @@ const editForm = ref({
 })
 const editImagenFile = ref(null)
 const loadingEdit = ref(false)
+const showDeleteObjetoConfirm = ref(false)
+const loadingDeleteObjeto = ref(false)
+
+// Estado para edición de mochila
+const showEditMochilaModal = ref(false)
+const editMochilaForm = ref({
+  nombre: '',
+  descripcion: '',
+  isPrivate: false
+})
+const showDeleteConfirm = ref(false)
+const loadingEditMochila = ref(false)
+const loadingDelete = ref(false)
+const loadingClone = ref(false)
+const showCloneForm = ref(false)
+const clonePassword = ref('')
 
 // Iconos
 const iconos = {
@@ -584,6 +757,7 @@ const iconos = {
   bolt: '⚡',
   apple: '🍎',
   document: '📄',
+  moon: '🌙',
   box: '📦'
 }
 
@@ -636,11 +810,6 @@ const totalObjetos = computed(() => {
   }, 0)
 })
 
-const pesoExcedido = computed(() => {
-  if (!mochila.value.capacidad_kg || mochila.value.capacidad_kg === 0) return false
-  return pesoTotal.value > (mochila.value.capacidad_kg * 1000)
-})
-
 const hasLocalChanges = computed(() => {
   return Object.keys(localChanges.value).length > 0
 })
@@ -657,7 +826,7 @@ const objetosFiltrados = computed(() => {
 // Methods
 const cargarMochila = async (password = null) => {
   try {
-    const body = password ? { viewPassword: password } : {}
+    const body = password ? { editPassword: password } : {}
     const data = await fetchData(`/mochilas/${route.params.codigo}`, {
       method: 'POST',
       body: JSON.stringify(body)
@@ -714,7 +883,7 @@ const cargarGrupos = async () => {
 }
 
 const cargarMochilaConPassword = () => {
-  cargarMochila(viewPassword.value)
+  cargarMochila(editPasswordMochila.value)
 }
 
 const cargarObjetosDisponibles = async () => {
@@ -1011,6 +1180,33 @@ const guardarCambiosObjeto = async () => {
   }
 }
 
+const executeDeleteObjeto = async () => {
+  loadingDeleteObjeto.value = true
+  try {
+    const body = {}
+    // Usar contraseña del objeto (la que se usó para abrir el modal)
+    if (objetoPasswordInput.value) {
+      body.editPassword = objetoPasswordInput.value
+    }
+    
+    await fetchData(`/objetos/${editForm.value.id}`, {
+      method: 'DELETE',
+      body: JSON.stringify(body)
+    })
+    
+    showToast('Objeto eliminado permanentemente')
+    showEditModal.value = false
+    showDeleteObjetoConfirm.value = false
+    objetoPasswordInput.value = ''
+    await cargarMochila(mochilaPassword.value)
+    await cargarObjetosDisponibles()
+  } catch (err) {
+    showToast(err.message || 'Error al eliminar objeto', 'error')
+  } finally {
+    loadingDeleteObjeto.value = false
+  }
+}
+
 const handleFileUpload = (event) => {
   imagenFile.value = event.target.files[0]
 }
@@ -1108,9 +1304,122 @@ const showToast = (message, type = 'success') => {
   }, 3000)
 }
 
+// Funciones para editar/eliminar mochila
+const openEditMochilaModal = () => {
+  editMochilaForm.value = {
+    nombre: mochila.value.nombre,
+    descripcion: mochila.value.descripcion || '',
+    isPrivate: mochila.value.is_private || false
+  }
+  showDeleteConfirm.value = false
+  showEditMochilaModal.value = true
+}
+
+const saveMochilaChanges = async () => {
+  loadingEditMochila.value = true
+  try {
+    const body = {
+      nombre: editMochilaForm.value.nombre,
+      descripcion: editMochilaForm.value.descripcion,
+      isPrivate: editMochilaForm.value.isPrivate
+    }
+    
+    // Enviar contraseña si la mochila la tiene
+    if (mochila.value.tiene_edit_password) {
+      body.editPassword = editPasswordMochila.value
+    }
+    
+    await fetchData(`/mochilas/${mochila.value.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    })
+    
+    showToast('Mochila actualizada')
+    showEditMochilaModal.value = false
+    
+    // Recargar mochila para reflejar cambios
+    await cargarMochila(mochila.value.is_private ? editPasswordMochila.value : null)
+  } catch (err) {
+    showToast(err.message || 'Error al actualizar mochila', 'error')
+  } finally {
+    loadingEditMochila.value = false
+  }
+}
+
+const executeDelete = async () => {
+  loadingDelete.value = true
+  try {
+    const body = {}
+    if (mochila.value.tiene_edit_password) {
+      body.editPassword = editPasswordMochila.value
+    }
+    
+    await fetchData(`/mochilas/${mochila.value.id}`, {
+      method: 'DELETE',
+      body: JSON.stringify(body)
+    })
+    
+    showToast('Mochila eliminada')
+    showEditMochilaModal.value = false
+    
+    // Redirigir a home
+    setTimeout(() => {
+      router.push('/')
+    }, 1000)
+  } catch (err) {
+    showToast(err.message || 'Error al eliminar mochila', 'error')
+  } finally {
+    loadingDelete.value = false
+  }
+}
+
+const executeClone = async () => {
+  loadingClone.value = true
+  try {
+    const body = {}
+    
+    // newEditPassword:
+    // - null cuando el campo está vacío → sin contraseña, pública
+    // - string con valor → nueva contraseña
+    body.newEditPassword = clonePassword.value || null
+    
+    const nuevaMochila = await fetchData(`/mochilas/${mochila.value.id}/clone`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+    
+    showEditMochilaModal.value = false
+    showCloneForm.value = false
+    clonePassword.value = ''
+    
+    // Redirigir a la nueva mochila clonada
+    router.push(`/m/${nuevaMochila.codigo}`)
+  } catch (err) {
+    showToast(err.message || 'Error al clonar mochila', 'error')
+  } finally {
+    loadingClone.value = false
+  }
+}
+
 // Watch
 watch(showAddModal, (val) => {
   if (val) cargarObjetosDisponibles()
+})
+
+// Recargar datos cuando cambia el código de la mochila en la URL
+watch(() => route.params.codigo, (newCodigo, oldCodigo) => {
+  if (newCodigo && newCodigo !== oldCodigo) {
+    // Resetear estados
+    editPasswordMochila.value = ''
+    showPasswordModal.value = false
+    showEditMochilaModal.value = false
+    showCloneForm.value = false
+    clonePassword.value = ''
+    // Volver arriba
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Cargar nueva mochila
+    cargarMochila()
+  }
 })
 
 // Init

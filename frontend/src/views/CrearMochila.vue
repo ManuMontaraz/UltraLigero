@@ -45,22 +45,6 @@
             ></textarea>
           </div>
 
-          <!-- Capacidad -->
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-2">
-              Capacidad máxima (kg)
-            </label>
-            <input 
-              v-model.number="form.capacidad_kg"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="Ej: 10"
-              class="input"
-            >
-            <p class="text-gray-500 text-sm mt-1">Deja en 0 o vacío para sin límite</p>
-          </div>
-
           <!-- Contraseñas -->
           <div class="border-t border-dark-border pt-6">
             <h3 class="text-lg font-medium text-white mb-4">Seguridad (opcional)</h3>
@@ -79,17 +63,17 @@
                 <p class="text-gray-500 text-sm mt-1">Requerida para añadir/eliminar objetos</p>
               </div>
 
-              <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">
-                  Contraseña de visualización
-                </label>
+              <div class="flex items-center gap-2">
                 <input 
-                  v-model="form.viewPassword"
-                  type="password"
-                  placeholder="Oculta la mochila al público"
-                  class="input"
+                  v-model="form.isPrivate"
+                  type="checkbox"
+                  id="isPrivate"
+                  class="w-4 h-4 rounded border-gray-600 bg-dark-card text-accent focus:ring-accent"
+                  :disabled="!form.editPassword"
                 >
-                <p class="text-gray-500 text-sm mt-1">Requerida para ver el contenido</p>
+                <label for="isPrivate" class="text-sm text-gray-300" :class="{ 'opacity-50': !form.editPassword }">
+                  Mochila privada (requiere contraseña para ver)
+                </label>
               </div>
             </div>
           </div>
@@ -104,14 +88,11 @@
                 </svg>
               </div>
               <div>
-                <div class="font-medium text-white">{{ form.nombre || 'Sin nombre' }}</div>
+                 <div class="font-medium text-white">{{ form.nombre || 'Sin nombre' }}</div>
                 <div class="text-sm text-gray-500">{{ form.descripcion || 'Sin descripción' }}</div>
                 <div class="flex gap-3 mt-2 text-xs">
-                  <span v-if="form.capacidad_kg" class="text-gray-400">
-                    {{ form.capacidad_kg }} kg
-                  </span>
                   <span v-if="form.editPassword" class="text-yellow-500">🔒 Edición protegida</span>
-                  <span v-if="form.viewPassword" class="text-red-500">🔒 Privada</span>
+                  <span v-if="form.isPrivate" class="text-red-500">🔒 Privada</span>
                 </div>
               </div>
             </div>
@@ -139,17 +120,17 @@
         </form>
 
         <!-- Success -->
-        <div v-if="mochilaCreada" class="mt-6 bg-green-500/10 border border-green-500/50 rounded-lg p-6 text-center">
+        <div v-if="mochilaCreada" ref="successSection" class="mt-6 bg-green-500/10 border border-green-500/50 rounded-lg p-6 text-center">
           <div class="text-green-400 text-5xl mb-4">🎉</div>
           <h3 class="text-lg font-medium text-white mb-2">¡Mochila creada!</h3>
           <p class="text-gray-400 mb-4">Código: <span class="font-mono text-accent font-bold">{{ mochilaCreada.codigo }}</span></p>
           <div class="flex gap-3 justify-center">
-            <button 
-              @click="copiarCodigo"
-              class="btn-secondary"
-            >
-              Copiar código
-            </button>
+             <button 
+               @click="copiarCodigo"
+               class="btn-secondary"
+             >
+               Copiar enlace
+             </button>
             <router-link 
               :to="`/m/${mochilaCreada.codigo}`" 
               class="btn-primary"
@@ -164,14 +145,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useApi } from '../composables/useApi.js'
 import { useSEO } from '../composables/useSEO.js'
 
 // SEO para página de crear mochila
+const appName = import.meta.env.VITE_APP_NAME || 'LeafPack'
+
 useSEO({
-  title: 'Crear Mochila Nueva',
-  description: 'Crea tu mochila de viaje ultraligera con LeafPack. Organiza objetos, calcula peso y precio total. Comparte con códigos cortos.',
+  title: 'Crear Nueva Mochila',
+  description: `Crea tu mochila de viaje ultraligera con ${appName}. Organiza objetos, calcula peso y precio total. Comparte con códigos cortos.`,
   image: 'https://leafpack.mntr.es/og-default.jpg'
 })
 
@@ -180,12 +163,12 @@ const { fetchData, loading, error } = useApi()
 const form = ref({
   nombre: '',
   descripcion: '',
-  capacidad_kg: null,
   editPassword: '',
-  viewPassword: ''
+  isPrivate: false
 })
 
 const mochilaCreada = ref(null)
+const successSection = ref(null)
 
 const crearMochila = async () => {
   try {
@@ -194,20 +177,29 @@ const crearMochila = async () => {
       body: JSON.stringify({
         nombre: form.value.nombre,
         descripcion: form.value.descripcion,
-        capacidad_kg: form.value.capacidad_kg,
         editPassword: form.value.editPassword || null,
-        viewPassword: form.value.viewPassword || null
+        isPrivate: form.value.isPrivate
       })
     })
     
     mochilaCreada.value = data
+    
+    // Scroll suave al mensaje de éxito
+    await nextTick()
+    if (successSection.value) {
+      successSection.value.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      })
+    }
   } catch (err) {
     // Error ya manejado en useApi
   }
 }
 
 const copiarCodigo = () => {
-  navigator.clipboard.writeText(mochilaCreada.value.codigo)
-  alert('Código copiado al portapapeles')
+  const url = `${window.location.origin}/m/${mochilaCreada.value.codigo}`
+  navigator.clipboard.writeText(url)
+  alert('Enlace copiado al portapapeles')
 }
 </script>

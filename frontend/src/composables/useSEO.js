@@ -8,7 +8,8 @@ export function useSEO({
   type = 'website',
   schema = null
 }) {
-  const fullTitle = title ? `${title} | LeafPack` : 'LeafPack - Organiza tu Mochila de Viaje'
+  const appName = import.meta.env.VITE_APP_NAME || 'LeafPack'
+  const fullTitle = title ? `${title} | ${appName}` : `${appName} - Organiza tu Mochila de Viaje`
   const currentUrl = url || (typeof window !== 'undefined' ? window.location.href : 'https://leafpack.mntr.es/')
   
   const meta = [

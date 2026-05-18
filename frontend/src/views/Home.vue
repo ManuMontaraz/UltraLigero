@@ -86,7 +86,13 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
-                {{ mochila.capacidad_kg }} kg
+                <span v-if="mochila.peso_total === 0 || mochila.peso_total === null">Vacía</span>
+                <span v-else>
+                  {{ mochila.peso_total }}g
+                  <span v-if="mochila.peso_total >= 1000" class="text-gray-500">
+                    ({{ (mochila.peso_total / 1000).toFixed(2) }}kg)
+                  </span>
+                </span>
               </span>
               <span v-if="mochila.tiene_password" class="flex items-center gap-1 text-yellow-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -105,29 +111,6 @@
         <p class="mt-4 text-gray-400">Cargando mochilas...</p>
       </div>
 
-      <!-- Footer -->
-      <footer class="mt-16 text-center pb-8">
-        <div class="text-gray-600 text-xs">
-          <p>
-            Licenciado bajo 
-            <a 
-              href="https://www.gnu.org/licenses/agpl-3.0.html" 
-              target="_blank" 
-              class="text-gray-500 hover:text-accent transition-colors"
-            >
-              AGPL-3.0
-            </a>
-            · 
-            <a 
-              href="https://github.com/ManuMontaraz/ultraligero" 
-              target="_blank" 
-              class="text-gray-500 hover:text-accent transition-colors"
-            >
-              Código fuente en GitHub
-            </a>
-          </p>
-        </div>
-      </footer>
     </main>
   </div>
 </template>
@@ -140,9 +123,11 @@ import { useSEO } from '../composables/useSEO.js'
 import { generateWebSiteSchema, generateOrganizationSchema } from '../utils/schemas.js'
 
 // SEO para página de inicio
+const appName = ref(import.meta.env.VITE_APP_NAME || 'LeafPack')
+
 useSEO({
   title: 'Organiza tu Mochila de Viaje',
-  description: 'Gestiona tu equipaje ultraligero con LeafPack. Calcula peso, precio y organiza objetos por categorías. Comparte tu configuración con códigos cortos.',
+  description: `Gestiona tu equipaje ultraligero con ${appName.value}. Calcula peso, precio y organiza objetos por categorías. Comparte tu configuración con códigos cortos.`,
   image: 'https://leafpack.mntr.es/og-default.jpg',
   schema: [generateWebSiteSchema(), generateOrganizationSchema()]
 })
@@ -150,7 +135,6 @@ useSEO({
 const router = useRouter()
 const { fetchData, loading } = useApi()
 
-const appName = ref('LeafPack')
 const mochilas = ref([])
 const searchCodigo = ref('')
 

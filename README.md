@@ -93,6 +93,12 @@ DB_PASSWORD=your_password
 DB_NAME=ultraligero
 DB_PORT=3306
 
+# CORS
+# Orígenes permitidos (separados por coma para múltiples)
+# En producción: https://tuweb.com
+# En desarrollo: dejar vacío para permitir cualquier origen
+CORS_ORIGIN=https://manumontaraz.es
+
 # Server
 PORT=3000
 NODE_ENV=development
@@ -207,32 +213,63 @@ UltraLigero/
 
 ## 🔌 API Endpoints
 
+> **Base URL:** `https://leafpack.mntr.es/api/` (producción) o `http://localhost:3000/api/` (desarrollo)
+>
+> **CORS:** Restringido al origen configurado en `CORS_ORIGIN` (por defecto: `https://manumontaraz.es`). En desarrollo, deja `CORS_ORIGIN` vacío para permitir cualquier origen.
+
 ### Mochilas
-- `GET /api/mochilas` — Listar mochilas públicas
-- `POST /api/mochilas` — Crear mochila
-- `POST /api/mochilas/:codigo` — Ver mochila (con contraseña opcional)
-- `POST /api/mochilas/:id/clone` — Clonar una mochila
-- `PUT /api/mochilas/:id` — Actualizar mochila
-- `DELETE /api/mochilas/:id` — Eliminar mochila
-- `POST /api/mochilas/:id/objetos` — Añadir objeto a mochila
-- `DELETE /api/mochilas/:id/objetos/:objetoId` — Eliminar objeto de mochila
-- `PUT /api/mochilas/:id/objetos/:objetoId/locales` — Guardar cambios locales
+
+| Método | Ruta | Descripción | Body | Auth |
+|--------|------|-------------|------|------|
+| `GET` | `/api/mochilas` | Listar mochilas públicas | — | Público |
+| `POST` | `/api/mochilas` | Crear mochila | `nombre` (req), `descripcion` (opt), `editPassword` (opt), `isPrivate` (opt) | Público |
+| `POST` | `/api/mochilas/:codigo` | Ver mochila | `editPassword` (opt) | Público |
+| `PUT` | `/api/mochilas/:id` | Actualizar mochila | `nombre` (opt), `descripcion` (opt), `newEditPassword` (opt), `isPrivate` (opt), `editPassword` (req si tiene) | `editPassword` |
+| `DELETE` | `/api/mochilas/:id` | Eliminar mochila | `editPassword` (req si tiene) | `editPassword` |
+| `POST` | `/api/mochilas/:id/clone` | Clonar mochila | `newEditPassword` (opt) | Público |
+| `POST` | `/api/mochilas/:id/objetos` | Añadir objeto a mochila | `objeto_id` (req), `cantidad` (req), `editPassword` (opt) | Público |
+| `DELETE` | `/api/mochilas/:id/objetos/:objetoId` | Quitar objeto de mochila | `editPassword` (opt) | Público |
+| `PUT` | `/api/mochilas/:id/objetos/:objetoId/locales` | Guardar cambios locales | `cantidad_local` (opt), `peso_local` (opt), `precio_local` (opt), `editPassword` (opt) | Público |
+| `DELETE` | `/api/mochilas/:id/locales` | Limpiar cambios locales | `editPassword` (opt) | Público |
 
 ### Objetos
-- `GET /api/objetos` — Listar objetos globales
-- `POST /api/objetos` — Crear objeto (con imagen opcional)
-- `PUT /api/objetos/:id` — Actualizar objeto
-- `DELETE /api/objetos/:id` — Eliminar objeto de la base de datos
+
+| Método | Ruta | Descripción | Body | Auth |
+|--------|------|-------------|------|------|
+| `GET` | `/api/objetos` | Listar objetos globales | — | Público |
+| `GET` | `/api/objetos/:id` | Ver objeto | — | Público |
+| `POST` | `/api/objetos` | Crear objeto | `nombre` (req), `descripcion` (opt), `peso_gr` (req), `precio` (opt), `url_compra` (opt), `grupo_id` (opt), `editPassword` (opt). Imagen vía `multipart/form-data` campo `imagen` | Público |
+| `PUT` | `/api/objetos/:id` | Actualizar objeto (JSON) | `nombre` (opt), `descripcion` (opt), `peso_gr` (opt), `precio` (opt), `url_compra` (opt), `grupo_id` (opt), `newEditPassword` (opt), `editPassword` (req si tiene) | `editPassword` |
+| `POST` | `/api/objetos/:id/update` | Actualizar objeto con imagen | Igual que `PUT` + imagen vía `multipart/form-data` campo `imagen` | `editPassword` |
+| `DELETE` | `/api/objetos/:id` | Eliminar objeto | `editPassword` (req si tiene) | `editPassword` |
+| `POST` | `/api/objetos/:id/verify-password` | Verificar password de objeto | `editPassword` (req) | Público |
 
 ### Grupos
-- `GET /api/grupos` — Listar grupos
+
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `GET` | `/api/grupos` | Listar grupos | Público |
+| `GET` | `/api/grupos/:id` | Ver grupo | Público |
 
 ### Administración
-- `POST /api/admin/verify` — Verificar contraseña de administrador
-- `GET /api/admin/mochilas` — Listar todas las mochilas (admin)
+
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `POST` | `/api/admin/verify` | Verificar contraseña admin | `ADMIN_PASSWORD` |
+| `GET` | `/api/admin/mochilas` | Listar todas las mochilas (con contraseñas) | Admin |
+| `PUT` | `/api/admin/mochilas/:id` | Actualizar mochila | Admin |
+| `DELETE` | `/api/admin/mochilas/:id` | Eliminar mochila | Admin |
+| `POST` | `/api/admin/objetos` | Crear objeto (JSON) | Admin |
+| `POST` | `/api/admin/objetos/with-image` | Crear objeto con imagen | Admin |
+| `PUT` | `/api/admin/objetos/:id` | Actualizar objeto | Admin |
+| `POST` | `/api/admin/objetos/:id/imagen` | Subir/actualizar imagen | Admin |
+| `DELETE` | `/api/admin/objetos/:id` | Eliminar objeto | Admin |
 
 ### SEO
-- `GET /sitemap.xml` — Sitemap dinámico
+
+| Método | Ruta | Descripción | Auth |
+|--------|------|-------------|------|
+| `GET` | `/sitemap.xml` | Sitemap dinámico con URLs públicas | Público |
 
 ---
 

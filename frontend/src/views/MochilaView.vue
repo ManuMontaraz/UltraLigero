@@ -3,40 +3,40 @@
     <!-- Header -->
     <header class="border-b border-dark-border bg-dark-card sticky top-0 z-40">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div class="flex items-center gap-4">
-            <router-link to="/" class="p-2 hover:bg-dark-bg rounded-lg transition-colors">
+            <router-link to="/" class="p-2 hover:bg-dark-bg rounded-lg transition-colors flex-shrink-0">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </router-link>
-            <div>
-              <div class="flex items-center gap-3">
-                <h1 class="text-xl font-bold text-white">{{ mochila.nombre }}</h1>
-                <span class="px-2 py-1 bg-accent/20 text-accent rounded text-sm font-mono">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <h1 class="text-lg sm:text-xl font-bold text-white truncate">{{ mochila.nombre }}</h1>
+                <span class="px-2 py-1 bg-accent/20 text-accent rounded text-sm font-mono flex-shrink-0">
                   {{ mochila.codigo }}
                 </span>
-                <span v-if="mochila.is_private" class="text-red-500 text-sm" title="Mochila privada">🔒</span>
-                <span v-else-if="mochila.tiene_edit_password" class="text-yellow-500 text-sm" title="Protegida con contraseña">🔒</span>
+                <span v-if="mochila.is_private" class="text-red-500 text-sm flex-shrink-0" title="Mochila privada">🔒</span>
+                <span v-else-if="mochila.tiene_edit_password" class="text-yellow-500 text-sm flex-shrink-0" title="Protegida con contraseña">🔒</span>
               </div>
-              <p class="text-gray-400 text-sm">{{ mochila.descripcion || 'Sin descripción' }}</p>
+              <p class="text-gray-400 text-sm truncate">{{ mochila.descripcion || 'Sin descripción' }}</p>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-3">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
             <!-- Contraseña de edición (si la mochila tiene protección) -->
             <div v-if="mochila.tiene_edit_password" class="flex items-center gap-2">
               <input
                 v-model="editPasswordMochila"
                 type="password"
                 placeholder="Contraseña de edición"
-                class="input w-32 sm:w-40 text-sm"
+                class="input w-full sm:w-40 text-sm"
                 :class="{ 'border-yellow-500': camposBloqueados }"
               >
-              <span v-if="editPasswordMochila" class="text-green-500 text-xs">✓</span>
+              <span v-if="editPasswordMochila" class="text-green-500 text-xs flex-shrink-0">✓</span>
             </div>
 
             <!-- Mensaje cuando campos están bloqueados -->
-            <div v-if="camposBloqueados" class="text-yellow-500 text-xs">
+            <div v-if="camposBloqueados" class="text-yellow-500 text-xs w-full sm:w-auto">
               ⚠️ Introduce la contraseña para editar
             </div>
 
@@ -163,7 +163,7 @@
             <div 
               v-for="obj in grupo.objetos" 
               :key="obj.id"
-              class="relative flex flex-col md:flex-row gap-4 p-4 pr-16 bg-dark-bg rounded-lg group hover:border hover:border-dark-border transition-all"
+              class="relative flex flex-col md:flex-row gap-4 p-4 pr-16 bg-dark-bg rounded-lg border border-transparent group hover:border-dark-border hover:bg-dark-card transition-all duration-300 ease-out"
             >
               <!-- Botones arriba a la derecha -->
               <div class="absolute top-2 right-2 flex items-center gap-1">

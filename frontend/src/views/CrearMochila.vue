@@ -155,7 +155,7 @@ const appName = import.meta.env.VITE_APP_NAME || 'LeafPack'
 useSEO({
   title: 'Crear Nueva Mochila',
   description: `Crea tu mochila de viaje ultraligera con ${appName}. Organiza objetos, calcula peso y precio total. Comparte con códigos cortos.`,
-  image: 'https://leafpack.mntr.es/og-default.jpg'
+  image: '/og-default.jpg'
 })
 
 const { fetchData, loading, error } = useApi()

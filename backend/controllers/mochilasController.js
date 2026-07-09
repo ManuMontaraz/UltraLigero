@@ -4,6 +4,34 @@ const { convertBigInt } = require('../utils/serializer');
 const bcrypt = require('bcryptjs');
 const { generateOGImage, deleteOGImage } = require('../services/ogImageGenerator');
 
+// Helpers para regeneración de imágenes OG
+const getObjetosMochila = async (conn, mochilaId) => {
+  return await conn.query(
+    `SELECT o.*, mo.cantidad, mo.cantidad_local, mo.peso_local, mo.precio_local,
+            g.nombre as grupo_nombre
+     FROM mochila_objetos mo
+     JOIN objetos o ON mo.objeto_id = o.id
+     LEFT JOIN grupos g ON o.grupo_id = g.id
+     WHERE mo.mochila_id = ?`,
+    [mochilaId]
+  );
+};
+
+const updateOGImage = async (conn, mochila) => {
+  try {
+    const objetos = await getObjetosMochila(conn, mochila.id);
+    if (objetos.length > 0) {
+      const ogImagePath = await generateOGImage(mochila, objetos);
+      await conn.query('UPDATE mochilas SET og_image_url = ? WHERE id = ?', [ogImagePath, mochila.id]);
+    } else {
+      await conn.query('UPDATE mochilas SET og_image_url = NULL WHERE id = ?', [mochila.id]);
+      await deleteOGImage(mochila.codigo);
+    }
+  } catch (ogErr) {
+    console.error('Error actualizando imagen OG:', ogErr);
+  }
+};
+
 const mochilasController = {
   // Obtener todas las mochilas públicas (versión limitada)
   getAll: async (req, res) => {
@@ -303,6 +331,20 @@ const mochilasController = {
         values
       );
 
+      // Actualizar imagen OG si cambian datos visibles o la privacidad
+      const datosCambiados = nombre !== undefined || descripcion !== undefined;
+      const privacidadCambiada = isPrivate !== undefined;
+
+      if (datosCambiados || privacidadCambiada) {
+        const mochilaActualizada = await conn.query('SELECT * FROM mochilas WHERE id = ?', [id]);
+        if (mochilaActualizada[0].is_private) {
+          await conn.query('UPDATE mochilas SET og_image_url = NULL WHERE id = ?', [id]);
+          await deleteOGImage(mochilaActualizada[0].codigo);
+        } else {
+          await updateOGImage(conn, mochilaActualizada[0]);
+        }
+      }
+
       res.json({ message: 'Mochila actualizada' });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -399,25 +441,10 @@ const mochilasController = {
         [id, objeto_id, cantidad || 1]
       );
 
-      // Obtener datos actualizados de la mochila para generar imagen OG
+      // Actualizar imagen OG si la mochila es pública
       const mochilaActualizada = await conn.query('SELECT * FROM mochilas WHERE id = ?', [id]);
-      const objetosDeMochila = await conn.query(
-        `SELECT o.*, mo.cantidad, mo.cantidad_local, mo.peso_local, mo.precio_local,
-                g.nombre as grupo_nombre
-         FROM mochila_objetos mo
-         JOIN objetos o ON mo.objeto_id = o.id
-         LEFT JOIN grupos g ON o.grupo_id = g.id
-         WHERE mo.mochila_id = ?`,
-        [id]
-      );
-      
-      // Generar imagen OG actualizada
-      try {
-        const ogImagePath = await generateOGImage(mochilaActualizada[0], objetosDeMochila);
-        await conn.query('UPDATE mochilas SET og_image_url = ? WHERE id = ?', [ogImagePath, id]);
-      } catch (ogErr) {
-        console.error('Error generando imagen OG:', ogErr);
-        // No fallar la operación principal si la imagen OG falla
+      if (!mochilaActualizada[0].is_private) {
+        await updateOGImage(conn, mochilaActualizada[0]);
       }
 
       res.json({ message: 'Objeto añadido a la mochila' });
@@ -459,29 +486,10 @@ const mochilasController = {
         [id, objetoId]
       );
 
-      // Actualizar imagen OG después de eliminar objeto
-      try {
-        const mochilaActualizada = await conn.query('SELECT * FROM mochilas WHERE id = ?', [id]);
-        const objetosDeMochila = await conn.query(
-          `SELECT o.*, mo.cantidad, mo.cantidad_local, mo.peso_local, mo.precio_local,
-                  g.nombre as grupo_nombre
-           FROM mochila_objetos mo
-           JOIN objetos o ON mo.objeto_id = o.id
-           LEFT JOIN grupos g ON o.grupo_id = g.id
-           WHERE mo.mochila_id = ?`,
-          [id]
-        );
-        
-        if (objetosDeMochila.length > 0) {
-          const ogImagePath = await generateOGImage(mochilaActualizada[0], objetosDeMochila);
-          await conn.query('UPDATE mochilas SET og_image_url = ? WHERE id = ?', [ogImagePath, id]);
-        } else {
-          // Si no hay objetos, eliminar la imagen OG
-          await conn.query('UPDATE mochilas SET og_image_url = NULL WHERE id = ?', [id]);
-          await deleteOGImage(mochilaActualizada[0].codigo);
-        }
-      } catch (ogErr) {
-        console.error('Error actualizando imagen OG:', ogErr);
+      // Actualizar imagen OG después de eliminar objeto si la mochila es pública
+      const mochilaActualizada = await conn.query('SELECT * FROM mochilas WHERE id = ?', [id]);
+      if (!mochilaActualizada[0].is_private) {
+        await updateOGImage(conn, mochilaActualizada[0]);
       }
 
       res.json({ message: 'Objeto eliminado de la mochila' });
@@ -560,6 +568,12 @@ const mochilasController = {
         values
       );
 
+      // Actualizar imagen OG tras cambiar peso/precio/cantidad local
+      const mochilaActualizada = await conn.query('SELECT * FROM mochilas WHERE id = ?', [id]);
+      if (!mochilaActualizada[0].is_private) {
+        await updateOGImage(conn, mochilaActualizada[0]);
+      }
+
       res.json({
         message: 'Cambios guardados',
         cambios: { cantidad_local, peso_local, precio_local }
@@ -607,6 +621,12 @@ const mochilasController = {
         'UPDATE mochila_objetos SET cantidad_local = NULL, peso_local = NULL, precio_local = NULL WHERE mochila_id = ?',
         [id]
       );
+
+      // Actualizar imagen OG tras limpiar cambios locales
+      const mochilaActualizada = await conn.query('SELECT * FROM mochilas WHERE id = ?', [id]);
+      if (!mochilaActualizada[0].is_private) {
+        await updateOGImage(conn, mochilaActualizada[0]);
+      }
 
       res.json({ message: 'Todos los cambios locales han sido eliminados' });
     } catch (err) {
@@ -713,26 +733,10 @@ const mochilasController = {
         );
       }
 
-      // 6. Generar imagen OG para la nueva mochila
-      try {
-        const nuevaMochila = await conn.query('SELECT * FROM mochilas WHERE id = ?', [nuevaMochilaId]);
-        const objetosNuevaMochila = await conn.query(
-          `SELECT o.*, mo.cantidad, mo.cantidad_local, mo.peso_local, mo.precio_local,
-                  g.nombre as grupo_nombre
-           FROM mochila_objetos mo
-           JOIN objetos o ON mo.objeto_id = o.id
-           LEFT JOIN grupos g ON o.grupo_id = g.id
-           WHERE mo.mochila_id = ?`,
-          [nuevaMochilaId]
-        );
-        
-        if (objetosNuevaMochila.length > 0) {
-          const ogImagePath = await generateOGImage(nuevaMochila[0], objetosNuevaMochila);
-          await conn.query('UPDATE mochilas SET og_image_url = ? WHERE id = ?', [ogImagePath, nuevaMochilaId]);
-        }
-      } catch (ogErr) {
-        console.error('Error generando imagen OG para mochila clonada:', ogErr);
-        // No fallar la operación principal si la imagen OG falla
+      // 6. Generar imagen OG para la nueva mochila si es pública
+      const nuevaMochila = await conn.query('SELECT * FROM mochilas WHERE id = ?', [nuevaMochilaId]);
+      if (!nuevaMochila[0].is_private) {
+        await updateOGImage(conn, nuevaMochila[0]);
       }
 
       res.status(201).json({

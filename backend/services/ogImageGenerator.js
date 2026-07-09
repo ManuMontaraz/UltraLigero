@@ -11,12 +11,27 @@ if (!fs.existsSync(OG_IMAGES_DIR)) {
 
 const generateOGImage = async (mochila, objetos) => {
   const { codigo, nombre } = mochila
-  
-  // Calcular stats
-  const totalPeso = objetos.reduce((sum, obj) => sum + ((obj.peso_gr || obj.peso_local || 0) * (obj.cantidad || 1)), 0)
-  const totalPrecio = objetos.reduce((sum, obj) => sum + ((obj.precio || obj.precio_local || 0) * (obj.cantidad || 1)), 0)
-  const totalObjetos = objetos.reduce((sum, obj) => sum + (obj.cantidad || 1), 0)
-  
+
+  // Helper para obtener el valor efectivo (local tiene prioridad sobre base)
+  const getEffectiveValue = (local, base, defaultValue = 0) => {
+    return local !== null && local !== undefined ? local : (base ?? defaultValue)
+  }
+
+  // Calcular stats usando valores locales efectivos
+  const totalPeso = objetos.reduce((sum, obj) => {
+    const cantidad = getEffectiveValue(obj.cantidad_local, obj.cantidad, 1)
+    const peso = getEffectiveValue(obj.peso_local, obj.peso_gr, 0)
+    return sum + (peso * cantidad)
+  }, 0)
+  const totalPrecio = objetos.reduce((sum, obj) => {
+    const cantidad = getEffectiveValue(obj.cantidad_local, obj.cantidad, 1)
+    const precio = getEffectiveValue(obj.precio_local, obj.precio, 0)
+    return sum + (precio * cantidad)
+  }, 0)
+  const totalObjetos = objetos.reduce((sum, obj) => {
+    return sum + getEffectiveValue(obj.cantidad_local, obj.cantidad, 1)
+  }, 0)
+
   // Categorías únicas
   const categorias = [...new Set(objetos.map(obj => obj.grupo_nombre).filter(Boolean))]
   
@@ -173,7 +188,8 @@ const generateOGImage = async (mochila, objetos) => {
     output: outputPath,
     puppeteerArgs: {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
+    },
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
   })
   
   return `/uploads/og/${codigo}.png`

@@ -128,7 +128,7 @@ const appName = ref(import.meta.env.VITE_APP_NAME || 'LeafPack')
 useSEO({
   title: 'Organiza tu Mochila de Viaje',
   description: `Gestiona tu equipaje ultraligero con ${appName.value}. Calcula peso, precio y organiza objetos por categorías. Comparte tu configuración con códigos cortos.`,
-  image: 'https://leafpack.mntr.es/og-default.jpg',
+  image: '/og-default.jpg',
   schema: [generateWebSiteSchema(), generateOrganizationSchema()]
 })
 

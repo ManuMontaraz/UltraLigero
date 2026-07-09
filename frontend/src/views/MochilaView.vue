@@ -679,6 +679,8 @@ import { useLocalChanges } from '../composables/useLocalChanges.js'
 import { useSEO } from '../composables/useSEO.js'
 import { generateBackpackSchema } from '../utils/schemas.js'
 
+const appUrl = (import.meta.env.VITE_APP_URL || 'https://leafpack.mntr.es').replace(/\/$/, '')
+
 const route = useRoute()
 const router = useRouter()
 const { fetchData, uploadFile, loading } = useApi()
@@ -840,8 +842,8 @@ const cargarMochila = async (password = null) => {
     useSEO({
       title: `Mochila de ${data.nombre} - ${pesoTotal.value.toFixed(0)}g`,
       description: `Equipaje ultraligero: ${totalObjetos.value} objetos, ${pesoTotal.value.toFixed(0)}g, ${precioTotal.value.toFixed(2)}€. Organizado en ${categorias.slice(0, 3).join(', ')}${categorias.length > 3 ? '...' : ''}.`,
-      image: data.og_image_url ? `https://leafpack.mntr.es${data.og_image_url}` : 'https://leafpack.mntr.es/og-default.jpg',
-      url: `https://leafpack.mntr.es/m/${data.codigo}`,
+      image: data.og_image_url || '/og-default.jpg',
+      url: `${appUrl}/m/${data.codigo}`,
       schema: generateBackpackSchema(data, objetos.value)
     })
     

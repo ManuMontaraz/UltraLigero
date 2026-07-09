@@ -8,7 +8,8 @@ module.exports = {
     max_memory_restart: '500M',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000
+      PORT: 3000,
+      PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium'
     },
     error_file: './logs/err.log',
     out_file: './logs/out.log',
